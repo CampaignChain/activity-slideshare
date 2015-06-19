@@ -1,0 +1,30 @@
+# This file is part of the CampaignChain package.
+#
+# (c) Sandro Groganz <sandro@campaignchain.com>
+#
+# For the full copyright and license information, please view the LICENSE
+# file that was distributed with this source code.
+
+campaignchain_activity_slideshare_new:
+    pattern: /activity/slideshare/new
+    defaults: { _controller: CampaignChainActivitySlideShareBundle:SlideShare:new }
+
+campaignchain_activity_slideshare_edit:
+    pattern: /activity/slideshare/{id}/edit
+    defaults: { _controller: CampaignChainActivitySlideShareBundle:SlideShare:edit }
+
+campaignchain_activity_slideshare_edit_modal:
+    pattern: /modal/activity/slideshare/{id}/edit
+    defaults: { _controller: CampaignChainActivitySlideShareBundle:SlideShare:editModal }
+
+campaignchain_activity_slideshare_edit_api:
+    pattern: /api/private/activity/slideshare/byactivity/{id}/edit
+    defaults: { _controller: CampaignChainActivitySlideShareBundle:SlideShare:editApi }
+    options:
+        expose: true
+
+campaignchain_activity_slideshare_read:
+    pattern: /activity/slideshare/{id}
+    defaults: { _controller: CampaignChainActivitySlideShareBundle:SlideShare:read }
+    
+

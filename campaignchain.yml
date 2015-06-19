@@ -1,0 +1,15 @@
+
+modules:
+    campaignchain-slideshare:
+        display_name: Publish SlideShare slideshow
+        description: This module publishes a previously-uploaded slideshow on SlideShare
+        channels: 
+            - campaignchain/channel-slideshare/campaignchain-slideshare
+        routes: 
+            new: campaignchain_activity_slideshare_new
+            edit: campaignchain_activity_slideshare_edit
+            edit_modal: campaignchain_activity_slideshare_edit_modal
+            edit_api: campaignchain_activity_slideshare_edit_api
+            read: campaignchain_activity_slideshare_read
+        hooks:
+            campaignchain-due: true

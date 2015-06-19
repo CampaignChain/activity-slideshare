@@ -1,0 +1,11 @@
+# This file is part of the CampaignChain package.
+#
+# (c) Sandro Groganz <sandro@campaignchain.com>
+#
+# For the full copyright and license information, please view the LICENSE
+# file that was distributed with this source code.
+
+services:
+#    campaign_chain_activity_slide_share.example:
+#        class: CampaignChain\Activity\SlideShareBundle\Example
+#        arguments: [@service_id, "plain_value", %parameter%]

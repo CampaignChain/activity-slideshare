@@ -1,0 +1,33 @@
+{
+    "name": "campaignchain/activity-slideshare",
+    "description": "",
+    "type": "campaignchain-activity",
+    "license": "Apache-2.0",
+    "homepage": "http://campaignchain.com",
+    "authors": [
+        {
+            "name": "Sandro Groganz",
+            "email": "sandro@campaignchain.com"
+        }
+    ],
+    "require": {
+    },
+    "autoload": {
+        "psr-4": { "CampaignChain\\Activity\\SlideShareBundle\\": "" }
+    },
+    "extra": {
+        "campaignchain": {
+            "kernel": {
+                "classes": [
+                    "CampaignChain\\Activity\\SlideShareBundle\\CampaignChainActivitySlideShareBundle"
+                ],
+                "routing":
+                {
+                    "name": "campaignchain_activity_slideshare",
+                    "resource": "@CampaignChainActivitySlideShareBundle/Resources/config/routing.yml",
+                    "prefix": "/"
+                }
+            }
+        }
+    }
+}
