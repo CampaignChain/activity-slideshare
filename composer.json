@@ -11,6 +11,9 @@
         }
     ],
     "require": {
+        "campaignchain/core": "dev-master",
+        "campaignchain/location-slideshare": "dev-master",
+        "campaignchain/operation-slideshare": "dev-master"
     },
     "autoload": {
         "psr-4": { "CampaignChain\\Activity\\SlideShareBundle\\": "" }
