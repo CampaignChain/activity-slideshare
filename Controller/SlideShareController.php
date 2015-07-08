@@ -60,7 +60,7 @@ class SlideShareController extends Controller
         if ($privateSlideshowCount == 0){
             $this->get('session')->getFlashBag()->add(
                 'warning',
-                'No private slideshows available.'
+                'No private slideshows found.'
             );
 
             return $this->redirect(
@@ -117,29 +117,12 @@ class SlideShareController extends Controller
             $activity->addOperation($operation);
             $operationModule->addOperation($operation);
             $operation->setOperationModule($operationModule);
-
-            // The Operation creates a Location, i.e. the newsletter
-            // will be accessible through an archive URL after publishing.
-            // Get the location module for the user stream.
-            $locationService = $this->get('campaignchain.core.location');
-            $locationModule = $locationService->getLocationModule(
-                self::LOCATION_BUNDLE_NAME,
-                self::LOCATION_MODULE_IDENTIFIER
-            );
-
-            $location = new Location();
-            $location->setLocationModule($locationModule);
-            $location->setParent($activity->getLocation());
-            $location->setIdentifier($sid);
-            $location->setName($slideshows[$sid]['title']);
-            $location->setUrl($slideshows[$sid]['url']);
-            $location->setStatus(Medium::STATUS_UNPUBLISHED);
-            $location->setOperation($operation);
-            $operation->addLocation($location);
-
+            
             $slideshowOperation = new Slideshow();
             $slideshowOperation->setOperation($operation);
             $slideshowOperation->setUrl($slideshows[$sid]['url']);
+            $slideshowOperation->setIdentifier($sid);
+            $slideshowOperation->setTitle($slideshows[$sid]['title']);
             
             $repository = $this->getDoctrine()->getManager();
 
@@ -156,14 +139,6 @@ class SlideShareController extends Controller
                 $hookService = $this->get('campaignchain.core.hook');
                 $activity = $hookService->processHooks(self::ACTIVITY_BUNDLE_NAME, self::ACTIVITY_MODULE_IDENTIFIER, $activity, $form, true);
                 $repository->flush();
-
-                // Schedule the newsletter on MailChimp.
-                /*
-                $client->campaigns->schedule(
-                    $newsletterOperation->getCampaignId(),
-                    $newsletterOperation->getSendTime()->format(self::MAILCHIMP_DATETIME_FORMAT)
-                );
-                */
 
                 $repository->getConnection()->commit();
             } catch (\Exception $e) {
@@ -198,7 +173,80 @@ class SlideShareController extends Controller
 
     public function editAction(Request $request, $id)
     {
-    
+        $activityService = $this->get('campaignchain.core.activity');
+        $activity = $activityService->getActivity($id);
+        $campaign = $activity->getCampaign();
+
+        // Get the one operation.
+        $operation = $activityService->getOperation($id);
+
+        $slideshowOperation = $this->getDoctrine()
+            ->getRepository('CampaignChainOperationSlideShareBundle:Slideshow')
+            ->findOneByOperation($operation);
+
+        if (!$slideshowOperation) {
+            throw new \Exception(
+                'No slideshow found for Operation with ID '.$operation->getId()
+            );
+        }
+
+        $activityType = $this->get('campaignchain.core.form.type.activity');
+        $activityType->setBundleName(self::ACTIVITY_BUNDLE_NAME);
+        $activityType->setModuleIdentifier(self::ACTIVITY_MODULE_IDENTIFIER);
+        $activityType->showNameField(false);
+        $activityType->setCampaign($campaign);
+
+        $form = $this->createForm($activityType, $activity);
+
+        $form->handleRequest($request);
+
+        if ($form->isValid()) {
+            
+            $repository = $this->getDoctrine()->getManager();
+
+            // Make sure that data stays intact by using transactions.
+            try {
+                $activityService = $this->get('campaignchain.core.activity');
+                $operation = $activityService->getOperation($id);
+                $operation->setName($activity->getName());
+                $repository->persist($operation);
+                $repository->persist($slideshowOperation);
+
+                $hookService = $this->get('campaignchain.core.hook');
+                $activity = $hookService->processHooks(self::ACTIVITY_BUNDLE_NAME, self::ACTIVITY_MODULE_IDENTIFIER, $activity, $form, true);
+                $repository->persist($activity);
+
+                $repository->flush();
+
+            } catch (\Exception $e) {
+                $repository->getConnection()->rollback();
+                throw $e;
+            }
+
+            // TODO: delete, for testing only
+            //$job = $this->get('campaignchain.job.operation.slideshare.publish_slideshow');
+            //$job->execute($operation->getId());
+            
+            $this->get('session')->getFlashBag()->add(
+                'success',
+                'The slideshow <a href="'.$this->generateUrl('campaignchain_core_activity_edit', array('id' => $activity->getId())).'">'.$activity->getName().'</a> has been edited successfully.'
+            );
+
+            return $this->redirect($this->generateUrl('campaignchain_core_activities'));
+            
+        }
+             
+        return $this->render(
+            'CampaignChainOperationSlideShareBundle::edit.html.twig',
+            array(
+                'page_title' => $activity->getName(),
+                'activity' => $activity,
+                'newsletter' => $slideshowOperation,
+                'form' => $form->createView(),
+                'form_submit_label' => 'Save',
+                'form_cancel_route' => 'campaignchain_core_activities'
+            ));
+        
     }
 
     public function editModalAction(Request $request, $id)
