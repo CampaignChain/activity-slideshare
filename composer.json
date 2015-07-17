@@ -1,6 +1,7 @@
 {
     "name": "campaignchain/activity-slideshare",
     "description": "Publish SlideShare slideshow",
+    "keywords": ["slideshare","campaignchain"],
     "type": "campaignchain-activity",
     "license": "Apache-2.0",
     "homepage": "http://campaignchain.com",
