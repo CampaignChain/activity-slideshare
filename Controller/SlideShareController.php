@@ -154,13 +154,17 @@ class SlideShareController extends Controller
             return $this->redirect($this->generateUrl('campaignchain_core_activities'));
             
         }
-        
+
+        $campaignService = $this->get('campaignchain.core.campaign');
+        $campaign = $campaignService->getCampaign($campaign);
+
         return $this->render(
             'CampaignChainCoreBundle:Operation:new.html.twig',
             array(
                 'page_title' => 'Activate Slideshow',
                 'activity' => $activity,
                 'campaign' => $campaign,
+                'campaign_module' => $campaign->getCampaignModule(),
                 'channel_module' => $wizard->getChannelModule(),
                 'channel_module_bundle' => $wizard->getChannelModuleBundle(),
                 'location' => $location,
