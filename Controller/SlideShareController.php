@@ -27,7 +27,7 @@ class SlideShareController extends Controller
     const OPERATION_BUNDLE_NAME         = 'campaignchain/operation-slideshare';
     const OPERATION_MODULE_IDENTIFIER   = 'campaignchain-slideshare';
     const LOCATION_BUNDLE_NAME          = 'campaignchain/location-slideshare';
-    const LOCATION_MODULE_IDENTIFIER    = 'campaignchain-slideshare';
+    const LOCATION_MODULE_IDENTIFIER    = 'campaignchain-slideshare-user';
     const TRIGGER_HOOK_IDENTIFIER       = 'campaignchain-due';
 
     public function newAction(Request $request)
@@ -57,7 +57,8 @@ class SlideShareController extends Controller
                 $slideshows[$id] = array('title' => $title, 'url' => $url); 
             }
         }
-        if ($privateSlideshowCount == 0){
+        
+        if ($privateSlideshowCount == 0) {
             $this->get('session')->getFlashBag()->add(
                 'warning',
                 'No private slideshows found.'
@@ -68,6 +69,30 @@ class SlideShareController extends Controller
             );
         } 
 
+        // check that available private slideshows are not already in use
+        $availableSlideshows = array();
+        if ($privateSlideshowCount > 0) {
+        
+            foreach($slideshows as $key => $value) {
+                if (!$locationService->existsInCampaign(
+                  self::LOCATION_BUNDLE_NAME, self::LOCATION_MODULE_IDENTIFIER, $key, $campaign
+                )) {
+                    $availableSlideshows[$key] = $value;
+                }
+            }
+            
+            if (!count($availableSlideshows)) {
+                $this->get('session')->getFlashBag()->add(
+                    'warning',
+                    'All available private slideshows have already been added to the campaign "'.$campaign->getName().'".'
+                );
+
+                return $this->redirect(
+                    $this->generateUrl('campaignchain_core_activities_new')
+                );         
+            }
+        }
+
         $activityType = $this->get('campaignchain.core.form.type.activity');
         $activityType->setBundleName(self::ACTIVITY_BUNDLE_NAME);
         $activityType->setModuleIdentifier(self::ACTIVITY_MODULE_IDENTIFIER);
@@ -77,13 +102,9 @@ class SlideShareController extends Controller
 
         $location = $locationService->getLocation($location->getId());
 
-        // Have the location point to the list of newsletters in the
-        // MailChimp website's admin area.
-        //$location->setUrl(self::LINK_ADMIN_CAMPAIGNS);
-
         $operationType->setLocation($location);
 
-        foreach ($slideshows as $key => $value) {
+        foreach ($availableSlideshows as $key => $value) {
             $formDataSlideshowsArr[$key] = $value['title'];
         }
         $operationType->setSlideshows($formDataSlideshowsArr);
@@ -95,7 +116,7 @@ class SlideShareController extends Controller
         );
         $activityType->setOperationForms($operationForms);
         $activityType->setCampaign($campaign);
-
+        
         $form = $this->createForm($activityType, $activity);
              
         $form->handleRequest($request);
@@ -103,7 +124,7 @@ class SlideShareController extends Controller
         if ($form->isValid()) {
             $sid = $form->get(self::OPERATION_MODULE_IDENTIFIER)->getData()['slideshow'];
             $activity = $wizard->end();
-            $title = $slideshows[$sid]['title'];
+            $title = $availableSlideshows[$sid]['title'];
             $activity->setName($title);
 
             // Get the operation module.
@@ -117,12 +138,31 @@ class SlideShareController extends Controller
             $activity->addOperation($operation);
             $operationModule->addOperation($operation);
             $operation->setOperationModule($operationModule);
+
+            // The Operation creates a Location, i.e. the slideshow 
+            // will be accessible through a URL after publishing.
+            // Get the location module for the user stream.
+            $locationService = $this->get('campaignchain.core.location');
+            $locationModule = $locationService->getLocationModule(
+                self::LOCATION_BUNDLE_NAME,
+                self::LOCATION_MODULE_IDENTIFIER
+            );
+            
+            $location = new Location();
+            $location->setLocationModule($locationModule);
+            $location->setParent($activity->getLocation());
+            $location->setIdentifier($sid);
+            $location->setName($availableSlideshows[$sid]['title']);
+            $location->setUrl($availableSlideshows[$sid]['url']);
+            $location->setStatus(Medium::STATUS_UNPUBLISHED);
+            $location->setOperation($operation);
+            $operation->addLocation($location);
             
             $slideshowOperation = new Slideshow();
             $slideshowOperation->setOperation($operation);
-            $slideshowOperation->setUrl($slideshows[$sid]['url']);
+            $slideshowOperation->setUrl($availableSlideshows[$sid]['url']);
             $slideshowOperation->setIdentifier($sid);
-            $slideshowOperation->setTitle($slideshows[$sid]['title']);
+            $slideshowOperation->setTitle($availableSlideshows[$sid]['title']);
             
             $repository = $this->getDoctrine()->getManager();
 
