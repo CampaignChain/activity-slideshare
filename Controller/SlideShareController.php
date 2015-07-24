@@ -234,6 +234,10 @@ class SlideShareController extends Controller
             );
         }
 
+        $client = $this->get('campaignchain.channel.slideshare.rest.client');
+        $connection = $client->connectByActivity($activity);
+        $xml = $connection->getSlideshowById($slideshowOperation->getIdentifier());
+        
         $activityType = $this->get('campaignchain.core.form.type.activity');
         $activityType->setBundleName(self::ACTIVITY_BUNDLE_NAME);
         $activityType->setModuleIdentifier(self::ACTIVITY_MODULE_IDENTIFIER);
@@ -268,8 +272,8 @@ class SlideShareController extends Controller
             }
 
             // TODO: delete, for testing only
-            //$job = $this->get('campaignchain.job.operation.slideshare.publish_slideshow');
-            //$job->execute($operation->getId());
+            $job = $this->get('campaignchain.job.operation.slideshare.publish_slideshow');
+            $job->execute($operation->getId());
             
             $this->get('session')->getFlashBag()->add(
                 'success',
@@ -285,7 +289,8 @@ class SlideShareController extends Controller
             array(
                 'page_title' => $activity->getName(),
                 'activity' => $activity,
-                'newsletter' => $slideshowOperation,
+                'slideshow' => $slideshowOperation,
+                'slideshow_embed' => $xml->Embed,
                 'form' => $form->createView(),
                 'form_submit_label' => 'Save',
                 'form_cancel_route' => 'campaignchain_core_activities'
@@ -295,6 +300,38 @@ class SlideShareController extends Controller
 
     public function editModalAction(Request $request, $id)
     {
+
+        $activityService = $this->get('campaignchain.core.activity');
+        $activity = $activityService->getActivity($id);
+
+        // Get the one operation.
+        $operation = $activityService->getOperation($id);
+
+        // Get the slideshow details
+        $slideshow = $this->getDoctrine()
+            ->getRepository('CampaignChainOperationSlideShareBundle:Slideshow')
+            ->findOneByOperation($operation);
+
+        if (!$slideshow) {
+            throw new \Exception(
+                'No slideshow found for Operation with ID '.$operation->getId()
+            );
+        }
+            
+        $client = $this->get('campaignchain.channel.slideshare.rest.client');
+        $connection = $client->connectByActivity($activity);
+        $xml = $connection->getSlideshowById($slideshow->getIdentifier());
+        
+        return $this->render(
+            'CampaignChainOperationSlideShareBundle::read_modal.html.twig',
+            array(
+                'page_title' => $activity->getName(),
+                'operation' => $operation,
+                'activity' => $activity,
+                'slideshow' => $slideshow,
+                'slideshow_embed' => $xml->Embed,
+                'show_date' => true,
+        ));
     
     }
 
@@ -305,6 +342,37 @@ class SlideShareController extends Controller
 
     public function readAction(Request $request, $id)
     {
+        $activityService = $this->get('campaignchain.core.activity');
+        $activity = $activityService->getActivity($id);
+
+        // Get the one operation.
+        $operation = $activityService->getOperation($id);
+
+        // Get the slideshow details
+        $slideshow = $this->getDoctrine()
+            ->getRepository('CampaignChainOperationSlideShareBundle:Slideshow')
+            ->findOneByOperation($operation);
+
+        if (!$slideshow) {
+            throw new \Exception(
+                'No slideshow found for Operation with ID '.$operation->getId()
+            );
+        }
+            
+        $client = $this->get('campaignchain.channel.slideshare.rest.client');
+        $connection = $client->connectByActivity($activity);
+        $xml = $connection->getSlideshowById($slideshow->getIdentifier());
+        
+        return $this->render(
+            'CampaignChainOperationSlideShareBundle::read.html.twig',
+            array(
+                'page_title' => $activity->getName(),
+                'operation' => $operation,
+                'activity' => $activity,
+                'slideshow' => $slideshow,
+                'slideshow_embed' => $xml->Embed,
+                'show_date' => true,
+        ));
     
     }
 }
