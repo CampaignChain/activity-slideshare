@@ -272,8 +272,8 @@ class SlideShareController extends Controller
             }
 
             // TODO: delete, for testing only
-            $job = $this->get('campaignchain.job.operation.slideshare.publish_slideshow');
-            $job->execute($operation->getId());
+            //$job = $this->get('campaignchain.job.operation.slideshare.publish_slideshow');
+            //$job->execute($operation->getId());
             
             $this->get('session')->getFlashBag()->add(
                 'success',
