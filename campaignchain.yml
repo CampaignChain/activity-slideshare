@@ -1,7 +1,7 @@
 
 modules:
     campaignchain-slideshare:
-        display_name: Schedule slideshow
+        display_name: Schedule private slideshow
         description: This module shedules a slideshow previously-uploaded on SlideShare
         channels: 
             - campaignchain/channel-slideshare/campaignchain-slideshare
