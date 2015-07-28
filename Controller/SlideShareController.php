@@ -237,7 +237,7 @@ class SlideShareController extends Controller
         $client = $this->get('campaignchain.channel.slideshare.rest.client');
         $connection = $client->connectByActivity($activity);
         $xml = $connection->getSlideshowById($slideshowOperation->getIdentifier());
-        
+
         $activityType = $this->get('campaignchain.core.form.type.activity');
         $activityType->setBundleName(self::ACTIVITY_BUNDLE_NAME);
         $activityType->setModuleIdentifier(self::ACTIVITY_MODULE_IDENTIFIER);
