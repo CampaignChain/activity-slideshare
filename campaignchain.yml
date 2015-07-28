@@ -1,8 +1,8 @@
 
 modules:
     campaignchain-slideshare:
-        display_name: Publish SlideShare slideshow
-        description: This module publishes a previously-uploaded slideshow on SlideShare
+        display_name: Schedule slideshow
+        description: This module shedules a slideshow previously-uploaded on SlideShare
         channels: 
             - campaignchain/channel-slideshare/campaignchain-slideshare
         routes: 
