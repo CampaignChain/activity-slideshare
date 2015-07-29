@@ -74,8 +74,8 @@ class SlideShareController extends Controller
         if ($privateSlideshowCount > 0) {
         
             foreach($slideshows as $key => $value) {
-                if (!$locationService->existsInCampaign(
-                  self::LOCATION_BUNDLE_NAME, self::LOCATION_MODULE_IDENTIFIER, $key, $campaign
+                if (!$locationService->existsInAllCampaigns(
+                  self::LOCATION_BUNDLE_NAME, self::LOCATION_MODULE_IDENTIFIER, $key
                 )) {
                     $availableSlideshows[$key] = $value;
                 }
@@ -84,7 +84,7 @@ class SlideShareController extends Controller
             if (!count($availableSlideshows)) {
                 $this->get('session')->getFlashBag()->add(
                     'warning',
-                    'All available private slideshows have already been added to the campaign "'.$campaign->getName().'".'
+                    'All available private slideshows have already been added to campaigns.'
                 );
 
                 return $this->redirect(
