@@ -74,8 +74,8 @@ class SlideShareController extends Controller
         if ($privateSlideshowCount > 0) {
         
             foreach($slideshows as $key => $value) {
-                if (!$locationService->existsInCampaign(
-                  self::LOCATION_BUNDLE_NAME, self::LOCATION_MODULE_IDENTIFIER, $key, $campaign
+                if (!$locationService->existsInAllCampaigns(
+                  self::LOCATION_BUNDLE_NAME, self::LOCATION_MODULE_IDENTIFIER, $key
                 )) {
                     $availableSlideshows[$key] = $value;
                 }
@@ -84,7 +84,7 @@ class SlideShareController extends Controller
             if (!count($availableSlideshows)) {
                 $this->get('session')->getFlashBag()->add(
                     'warning',
-                    'All available private slideshows have already been added to the campaign "'.$campaign->getName().'".'
+                    'All available private slideshows have already been added to campaigns.'
                 );
 
                 return $this->redirect(
@@ -180,6 +180,12 @@ class SlideShareController extends Controller
                 $activity = $hookService->processHooks(self::ACTIVITY_BUNDLE_NAME, self::ACTIVITY_MODULE_IDENTIFIER, $activity, $form, true);
                 $repository->flush();
 
+                /*
+                 * Edit the slideshow so that embeds are allowed and we can display
+                 * the slideshow from within CampaignChain.
+                 */
+                $connection->allowEmbedsUserSlideshow($sid);
+
                 $repository->getConnection()->commit();
             } catch (\Exception $e) {
                 $repository->getConnection()->rollback();
@@ -201,7 +207,7 @@ class SlideShareController extends Controller
         return $this->render(
             'CampaignChainCoreBundle:Operation:new.html.twig',
             array(
-                'page_title' => 'Activate Slideshow',
+                'page_title' => 'Schedule Slideshow',
                 'activity' => $activity,
                 'campaign' => $campaign,
                 'campaign_module' => $campaign->getCampaignModule(),
@@ -237,7 +243,17 @@ class SlideShareController extends Controller
         $client = $this->get('campaignchain.channel.slideshare.rest.client');
         $connection = $client->connectByActivity($activity);
         $xml = $connection->getSlideshowById($slideshowOperation->getIdentifier());
-        
+
+        /*
+         * If the slideshow embed option was revoked on SlideShare.com, then
+         * configure it to work again, so that we can display the slideshow
+         * within CampaignChain.
+         */
+        if($xml->AllowEmbed == 0) {
+            $returnXML = $connection->allowEmbedsUserSlideshow($xml->ID);
+            print_r($returnXML);
+        }
+
         $activityType = $this->get('campaignchain.core.form.type.activity');
         $activityType->setBundleName(self::ACTIVITY_BUNDLE_NAME);
         $activityType->setModuleIdentifier(self::ACTIVITY_MODULE_IDENTIFIER);
