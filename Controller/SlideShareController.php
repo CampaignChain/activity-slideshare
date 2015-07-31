@@ -12,12 +12,16 @@ namespace CampaignChain\Activity\SlideShareBundle\Controller;
 
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use CampaignChain\Location\SlideShareBundle\Entity\SlideShareUser;
 use CampaignChain\Operation\SlideShareBundle\Form\Type\SlideShareOperationType;
 use CampaignChain\CoreBundle\Entity\Operation;
 use CampaignChain\CoreBundle\Entity\Location;
 use CampaignChain\CoreBundle\Entity\Medium;
 use CampaignChain\Operation\SlideShareBundle\Entity\Slideshow;
+use Symfony\Component\Serializer\Serializer;
+use Symfony\Component\Serializer\Encoder\JsonEncoder;
+use Symfony\Component\Serializer\Normalizer\GetSetMethodNormalizer;
 
 class SlideShareController extends Controller
 {
@@ -316,44 +320,88 @@ class SlideShareController extends Controller
 
     public function editModalAction(Request $request, $id)
     {
-
         $activityService = $this->get('campaignchain.core.activity');
         $activity = $activityService->getActivity($id);
+        $campaign = $activity->getCampaign();
 
         // Get the one operation.
         $operation = $activityService->getOperation($id);
 
-        // Get the slideshow details
-        $slideshow = $this->getDoctrine()
+        $slideshowOperation = $this->getDoctrine()
             ->getRepository('CampaignChainOperationSlideShareBundle:Slideshow')
             ->findOneByOperation($operation);
 
-        if (!$slideshow) {
+        if (!$slideshowOperation) {
             throw new \Exception(
                 'No slideshow found for Operation with ID '.$operation->getId()
             );
         }
-            
+
         $client = $this->get('campaignchain.channel.slideshare.rest.client');
         $connection = $client->connectByActivity($activity);
-        $xml = $connection->getSlideshowById($slideshow->getIdentifier());
-        
+        $xml = $connection->getSlideshowById($slideshowOperation->getIdentifier());
+
+        /*
+         * If the slideshow embed option was revoked on SlideShare.com, then
+         * configure it to work again, so that we can display the slideshow
+         * within CampaignChain.
+         */
+        if($xml->AllowEmbed == 0) {
+            $returnXML = $connection->allowEmbedsUserSlideshow($xml->ID);
+            print_r($returnXML);
+        }
+
+        $activityType = $this->get('campaignchain.core.form.type.activity');
+        $activityType->setBundleName(self::ACTIVITY_BUNDLE_NAME);
+        $activityType->setModuleIdentifier(self::ACTIVITY_MODULE_IDENTIFIER);
+        $activityType->showNameField(false);
+        $activityType->setCampaign($campaign);
+
+        $form = $this->createForm($activityType, $activity);
+
+        $form->handleRequest($request);
+
         return $this->render(
-            'CampaignChainOperationSlideShareBundle::read_modal.html.twig',
+            'CampaignChainOperationSlideShareBundle::edit_modal.html.twig',
             array(
                 'page_title' => $activity->getName(),
                 'operation' => $operation,
                 'activity' => $activity,
-                'slideshow' => $slideshow,
+                'form' => $form->createView(),
+                'slideshow' => $slideshowOperation,
                 'slideshow_embed' => $xml->Embed,
                 'show_date' => true,
-        ));
-    
+            ));
     }
 
     public function editApiAction(Request $request, $id)
     {
-    
+        $responseData = array();
+
+        $data = $request->get('campaignchain_core_activity');
+
+        //$responseData['payload'] = $data;
+
+        $activityService = $this->get('campaignchain.core.activity');
+        $activity = $activityService->getActivity($id);
+
+        $hookService = $this->get('campaignchain.core.hook');
+        $activity = $hookService->processHooks(self::ACTIVITY_BUNDLE_NAME, self::ACTIVITY_MODULE_IDENTIFIER, $activity, $data);
+
+        $repository = $this->getDoctrine()->getManager();
+        $repository->persist($activity);
+        $repository->flush();
+
+        $responseData['start_date'] =
+        $responseData['end_date'] =
+            $activity->getStartDate()->format(\DateTime::ISO8601);
+
+        $encoders = array(new JsonEncoder());
+        $normalizers = array(new GetSetMethodNormalizer());
+        $serializer = new Serializer($normalizers, $encoders);
+
+        $response = new Response($serializer->serialize($responseData, 'json'));
+        return $response->setStatusCode(Response::HTTP_OK);
     }
 
     public function readAction(Request $request, $id)
@@ -390,5 +438,40 @@ class SlideShareController extends Controller
                 'show_date' => true,
         ));
     
+    }
+
+    public function readModalAction(Request $request, $id)
+    {
+        $activityService = $this->get('campaignchain.core.activity');
+        $activity = $activityService->getActivity($id);
+
+        // Get the one operation.
+        $operation = $activityService->getOperation($id);
+
+        // Get the slideshow details
+        $slideshow = $this->getDoctrine()
+            ->getRepository('CampaignChainOperationSlideShareBundle:Slideshow')
+            ->findOneByOperation($operation);
+
+        if (!$slideshow) {
+            throw new \Exception(
+                'No slideshow found for Operation with ID '.$operation->getId()
+            );
+        }
+
+        $client = $this->get('campaignchain.channel.slideshare.rest.client');
+        $connection = $client->connectByActivity($activity);
+        $xml = $connection->getSlideshowById($slideshow->getIdentifier());
+
+        return $this->render(
+            'CampaignChainOperationSlideShareBundle::read_modal.html.twig',
+            array(
+                'page_title' => $activity->getName(),
+                'operation' => $operation,
+                'activity' => $activity,
+                'slideshow' => $slideshow,
+                'slideshow_embed' => $xml->Embed,
+                'show_date' => true,
+            ));
     }
 }
