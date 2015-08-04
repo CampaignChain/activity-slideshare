@@ -201,6 +201,14 @@ class SlideShareController extends Controller
                 'The slideshow <a href="'.$this->generateUrl('campaignchain_core_activity_edit', array('id' => $activity->getId())).'">'.$activity->getName().'</a> has been added successfully.'
             );
 
+            // Status Update to be sent immediately?
+            // TODO: This is an intermediary hardcoded hack and should be instead handled by the scheduler.
+            if ($form->get('campaignchain_hook_campaignchain_due')->has('execution_choice') && $form->get('campaignchain_hook_campaignchain_due')->get('execution_choice')->getData() == 'now') {
+                $job = $this->get('campaignchain.job.operation.slideshare.publish_slideshow');
+                $job->execute($operation->getId());
+                // TODO: Add different flashbag which includes link to published slideshow
+            }
+
             return $this->redirect($this->generateUrl('campaignchain_core_activities'));
             
         }
@@ -299,6 +307,14 @@ class SlideShareController extends Controller
                 'success',
                 'The slideshow <a href="'.$this->generateUrl('campaignchain_core_activity_edit', array('id' => $activity->getId())).'">'.$activity->getName().'</a> has been edited successfully.'
             );
+
+            // Status Update to be sent immediately?
+            // TODO: This is an intermediary hardcoded hack and should be instead handled by the scheduler.
+            if ($form->get('campaignchain_hook_campaignchain_due')->has('execution_choice') && $form->get('campaignchain_hook_campaignchain_due')->get('execution_choice')->getData() == 'now') {
+                $job = $this->get('campaignchain.job.operation.slideshare.publish_slideshow');
+                $job->execute($operation->getId());
+                // TODO: Add different flashbag which includes link to published slideshow
+            }
 
             return $this->redirect($this->generateUrl('campaignchain_core_activities'));
             
