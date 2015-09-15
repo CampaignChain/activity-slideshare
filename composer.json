@@ -17,9 +17,9 @@
         "docs": "http://doc.campaignchain.com"
     },
     "require": {
-        "campaignchain/core": "dev-master",
-        "campaignchain/location-slideshare": "dev-master",
-        "campaignchain/operation-slideshare": "dev-master"
+        "campaignchain/core": "1.0.0-beta.2",
+        "campaignchain/location-slideshare": "1.0.0-beta.2",
+        "campaignchain/operation-slideshare": "1.0.0-beta.2"
     },
     "autoload": {
         "psr-4": { "CampaignChain\\Activity\\SlideShareBundle\\": "" }
