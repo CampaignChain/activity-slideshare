@@ -11,11 +11,13 @@
 namespace CampaignChain\Activity\SlideShareBundle\Controller;
 
 use CampaignChain\Channel\SlideShareBundle\REST\SlideShareClient;
-use CampaignChain\CoreBundle\Controller\Module\AbstractActivityModuleHandler;
+use CampaignChain\CoreBundle\Controller\Module\AbstractActivityHandler;
 use CampaignChain\CoreBundle\EntityService\LocationService;
+use CampaignChain\Operation\SlideShareBundle\Job\PublishSlideshow;
 use Doctrine\ORM\EntityManager;
 use Symfony\Bundle\FrameworkBundle\Routing\Router;
 use Symfony\Bundle\TwigBundle\TwigEngine;
+use Symfony\Component\Form\Form;
 use Symfony\Component\HttpFoundation\Session\Session;
 use CampaignChain\CoreBundle\Entity\Operation;
 use CampaignChain\CoreBundle\Entity\Activity;
@@ -23,16 +25,17 @@ use CampaignChain\CoreBundle\Entity\Location;
 use CampaignChain\Operation\SlideShareBundle\Entity\Slideshow;
 use CampaignChain\Operation\SlideShareBundle\EntityService\Slideshow as SlideshowService;
 
-class SlideShareHandler extends AbstractActivityModuleHandler
+class SlideShareHandler extends AbstractActivityHandler
 {
     const LOCATION_BUNDLE_NAME          = 'campaignchain/location-slideshare';
     const LOCATION_MODULE_IDENTIFIER    = 'campaignchain-slideshare-user';
 
+    protected $em;
     protected $router;
-    protected $detailService;
+    protected $contentService;
     protected $locationService;
     protected $restClient;
-    protected $em;
+    protected $job;
     protected $session;
     protected $templating;
     protected $availableSlideshows;
@@ -41,166 +44,118 @@ class SlideShareHandler extends AbstractActivityModuleHandler
 
     public function __construct(
         EntityManager $em,
-        SlideshowService $detailService,
+        SlideshowService $contentService,
         LocationService $locationService,
         SlideShareClient $restClient,
+        PublishSlideshow $job,
         $session,
         TwigEngine $templating,
         Router $router
     )
     {
-        $this->router = $router;
-        $this->detailService = $detailService;
-        $this->locationService = $locationService;
-        $this->restClient = $restClient;
         $this->em = $em;
-        $this->session = $session;
-        $this->templating = $templating;
+        $this->contentService   = $contentService;
+        $this->locationService  = $locationService;
+        $this->restClient       = $restClient;
+        $this->job              = $job;
+        $this->session          = $session;
+        $this->templating       = $templating;
+        $this->router           = $router;
     }
 
-    public function getOperationDetail(Location $location, Operation $operation = null)
+    public function createContent(Location $location)
     {
-        if(!$operation) {
-            // Retrieve slide decks from slideshare.net via REST API.
-            $connection = $this->getRestApiConnectionByLocation($location);
-            $xml = $connection->getUserSlideshows();
-            $privateSlideshowCount = 0;
-            $slideshows = array();
-            foreach ($xml->Slideshow as $slideshow) {
-                if ($slideshow->PrivacyLevel == 1) {
-                    $privateSlideshowCount++;
-                    $id = (int)$slideshow->ID;
-                    $title = (string)$slideshow->Title;
-                    $url = (string)$slideshow->URL;
-                    $slideshows[$id] = array('title' => $title, 'url' => $url);
+        // Retrieve slide decks from slideshare.net via REST API.
+        $connection = $this->getRestApiConnectionByLocation($location);
+        $xml = $connection->getUserSlideshows();
+        $privateSlideshowCount = 0;
+        $slideshows = array();
+        foreach ($xml->Slideshow as $slideshow) {
+            if ($slideshow->PrivacyLevel == 1) {
+                $privateSlideshowCount++;
+                $id = (int)$slideshow->ID;
+                $title = (string)$slideshow->Title;
+                $url = (string)$slideshow->URL;
+                $slideshows[$id] = array('title' => $title, 'url' => $url);
+            }
+        }
+
+        if ($privateSlideshowCount == 0) {
+            $this->session->getFlashBag()->add(
+                'warning',
+                'No private slideshows found.'
+            );
+
+            header('Location: '.$this->router->generate('campaignchain_core_activities_new'));
+            exit;
+        }
+
+        // check that available private slideshows are not already in use
+        $this->availableSlideshows = array();
+        if ($privateSlideshowCount > 0) {
+
+            foreach($slideshows as $key => $value) {
+                if (!$this->locationService->existsInAllCampaigns(
+                    self::LOCATION_BUNDLE_NAME, self::LOCATION_MODULE_IDENTIFIER, $key
+                )) {
+                    $this->availableSlideshows[$key] = $value;
                 }
             }
 
-            if ($privateSlideshowCount == 0) {
+            if (!count($this->availableSlideshows)) {
                 $this->session->getFlashBag()->add(
                     'warning',
-                    'No private slideshows found.'
+                    'All available private slideshows have already been added to campaigns.'
                 );
 
                 header('Location: '.$this->router->generate('campaignchain_core_activities_new'));
                 exit;
             }
-
-            // check that available private slideshows are not already in use
-            $this->availableSlideshows = array();
-            if ($privateSlideshowCount > 0) {
-
-                foreach($slideshows as $key => $value) {
-                    if (!$this->locationService->existsInAllCampaigns(
-                        self::LOCATION_BUNDLE_NAME, self::LOCATION_MODULE_IDENTIFIER, $key
-                    )) {
-                        $this->availableSlideshows[$key] = $value;
-                    }
-                }
-
-                if (!count($this->availableSlideshows)) {
-                    $this->session->getFlashBag()->add(
-                        'warning',
-                        'All available private slideshows have already been added to campaigns.'
-                    );
-
-                    header('Location: '.$this->router->generate('campaignchain_core_activities_new'));
-                    exit;
-                }
-            }
-
-            foreach ($this->availableSlideshows as $key => $value) {
-                $formDataSlideshowsArr[$key] = $value['title'];
-            }
-
-            return $formDataSlideshowsArr;
-        } else {
-//            $operationDetails = $this->detailService->getSlideshowByOperation($operation);
-//
-//            $this->makeRemoteSlideshowEmbeddable(
-//                $operation, $operationDetails->getIdentifier()
-//            );
-//
-//            return $operationDetails;
-
-            return null;
         }
+
+        foreach ($this->availableSlideshows as $key => $value) {
+            $formDataSlideshowsArr[$key] = $value['title'];
+        }
+
+        return $formDataSlideshowsArr;
     }
 
-    public function processOperationDetails(Operation $operation, $data)
+    public function processContent(Operation $operation, $data)
     {
         if(isset($data['slideshow'])) {
             $sid = $data['slideshow'];
 
-            $operationDetails = new Slideshow();
-            $operationDetails->setOperation($operation);
-            $operationDetails->setUrl($this->availableSlideshows[$sid]['url']);
-            $operationDetails->setIdentifier($sid);
-            $operationDetails->setTitle($this->availableSlideshows[$sid]['title']);
+            $content = new Slideshow();
+            $content->setOperation($operation);
+            $content->setUrl($this->availableSlideshows[$sid]['url']);
+            $content->setIdentifier($sid);
+            $content->setTitle($this->availableSlideshows[$sid]['title']);
 
-            return $operationDetails;
+            return $content;
         } else {
             throw new \Exception('SlideShow details cannot be edited.');
         }
     }
 
-    public function readOperationDetailsAction(Operation $operation)
+    public function readAction(Operation $operation)
     {
-        $status = $this->detailService->getStatusByOperation($operation);
+        // Get the slideshow details
+        $slideshow = $this->contentService->getSlideshowByOperation($operation);
 
-        // Connect to Twitter REST API
         $connection = $this->restClient->connectByActivity($operation->getActivity());
+        $xml = $connection->getSlideshowById($slideshow->getIdentifier());
 
-        $isProtected = false;
-        $notAccessible = false;
-
-        try {
-            $request = $connection->get('statuses/oembed.json?id='.$status->getIdStr());
-            $response = $request->send()->json();
-            $message = $response['html'];
-        } catch (\Exception $e) {
-            // Check whether it is a protected tweet.
-            if(
-                'Forbidden' == $e->getResponse()->getReasonPhrase() &&
-                '403'       == $e->getResponse()->getStatusCode()
-            ){
-                $this->session->getFlashBag()->add(
-                    'warning',
-                    'This is a protected tweet.'
-                );
-                $message = $status->getMessage();
-            } else {
-//                    throw new \Exception(
-//                        'TWitter API error: '.
-//                        'Reason: '.$e->getResponse()->getReasonPhrase().','.
-//                        'Status: '.$e->getResponse()->getStatusCode().','
-//                    );
-                $this->session->getFlashBag()->add(
-                    'warning',
-                    'This Tweet might not have been published yet.'
-                );
-                $message = $status->getMessage();
-                $notAccessible = true;
-            }
-        }
-
-        $locationTwitter = $this->em
-            ->getRepository('CampaignChainLocationTwitterBundle:TwitterUser')
-            ->findOneByLocation($operation->getActivity()->getLocation());
-
-        $tweetUrl = $status->getUrl();
+        print_r($xml);
 
         return $this->templating->renderResponse(
-            'CampaignChainOperationTwitterBundle::read.html.twig',
+            'CampaignChainOperationSlideShareBundle::read.html.twig',
             array(
                 'page_title' => $operation->getActivity()->getName(),
-                'tweet_is_protected' => $isProtected,
-                'tweet_not_accessible' => $notAccessible,
-                'message' => $message,
-                'status' => $status,
+                'operation' => $operation,
                 'activity' => $operation->getActivity(),
-                'activity_date' => $operation->getActivity()->getStartDate()->format(self::DATETIME_FORMAT_TWITTER),
-                'location_twitter' => $locationTwitter,
+                'slideshow' => $slideshow,
+                'slideshow_embed' => $xml->Embed,
+                'show_date' => true,
             ));
     }
 
@@ -213,7 +168,7 @@ class SlideShareHandler extends AbstractActivityModuleHandler
         return $activity;
     }
 
-    public function processOperationLocation(Location $location, $data)
+    public function processContentLocation(Location $location, $data)
     {
         $sid = $data['slideshow'];
         $location->setIdentifier($sid);
@@ -223,47 +178,53 @@ class SlideShareHandler extends AbstractActivityModuleHandler
         return $location;
     }
 
-    public function postPersistNewAction(Operation $operation)
+    public function postPersistNewEvent(Operation $operation, Form $form, $content = null)
     {
-        $operationDetails = $this->detailService->getSlideshowByOperation($operation);
-
-        $this->makeRemoteSlideshowEmbeddable(
-            $operation, $operationDetails->getIdentifier());
+        // Content to be published immediately?
+        if (!$this->publishNow($operation, $form)){
+            $this->makeRemoteSlideshowEmbeddable($operation);
+        }
     }
 
-    public function preFormCreateEditAction(Operation $operation)
+    public function postPersistEditEvent(Operation $operation, Form $form, $content = null)
     {
-        $this->postPersistNewAction($operation);
+        // Content to be published immediately?
+        $this->publishNow($operation, $form);
     }
 
-    public function preFormCreateEditModalAction(Operation $operation)
+    public function preFormSubmitEditEvent(Operation $operation)
     {
-        $this->postPersistNewAction($operation);
+        $this->makeRemoteSlideshowEmbeddable($operation);
     }
 
-    public function getRenderOptionsEditAction(Operation $operation)
+    public function preFormSubmitEditModalEvent(Operation $operation)
     {
-        $operationDetails = $this->detailService->getSlideshowByOperation($operation);
-        $remoteSlideshow = $this->getRemoteSlideshow($operation, $operationDetails->getIdentifier());
+        $this->makeRemoteSlideshowEmbeddable($operation);
+    }
+
+    public function getEditRenderOptions(Operation $operation)
+    {
+        $content = $this->contentService->getSlideshowByOperation($operation);
+        $remoteSlideshow = $this->getRemoteSlideshow($operation, $content->getIdentifier());
 
         return array(
             'template' => 'CampaignChainOperationSlideShareBundle::edit.html.twig',
             'vars' => array(
-                'slideshow' => $operationDetails,
+                'slideshow' => $content,
                 'slideshow_embed' => $remoteSlideshow->Embed
             )
         );
     }
 
-    public function getRenderOptionsEditModalAction(Operation $operation)
+    public function getEditModalRenderOptions(Operation $operation)
     {
-        $operationDetails = $this->detailService->getSlideshowByOperation($operation);
-        $remoteSlideshow = $this->getRemoteSlideshow($operation, $operationDetails->getIdentifier());
+        $content = $this->contentService->getSlideshowByOperation($operation);
+        $remoteSlideshow = $this->getRemoteSlideshow($operation, $content->getIdentifier());
 
         return array(
             'template' => 'CampaignChainOperationSlideShareBundle::edit_modal.html.twig',
             'vars' => array(
-                'slideshow' => $operationDetails,
+                'slideshow' => $content,
                 'slideshow_embed' => $remoteSlideshow->Embed,
                 'operation' => $operation,
                 'activity' => $operation->getActivity(),
@@ -279,12 +240,15 @@ class SlideShareHandler extends AbstractActivityModuleHandler
      * @param Operation $operation
      * @param string $identifier
      */
-    private function makeRemoteSlideshowEmbeddable(Operation $operation, $identifier)
+    private function makeRemoteSlideshowEmbeddable(Operation $operation)
     {
-        $remoteSlideshow = $this->getRemoteSlideshow($operation, $identifier);
+        $content = $this->contentService->getSlideshowByOperation($operation);
+
+        $remoteSlideshow = $this->getRemoteSlideshow(
+            $operation, $content->getIdentifier()
+        );
         if($remoteSlideshow->AllowEmbed == 0) {
             $connection = $this->getRestApiConnectionByOperation($operation);
-            $connection = $this->getRestApiConnection($operation);
             $connection->allowEmbedsUserSlideshow($remoteSlideshow->ID);
         }
     }
@@ -321,12 +285,28 @@ class SlideShareHandler extends AbstractActivityModuleHandler
         return $this->remoteSlideshow;
     }
 
-    public function hasOperationForm($view)
+    public function hasContent($view)
     {
         if($view != 'new'){
             return false;
         }
 
         return true;
+    }
+
+    private function publishNow(Operation $operation, Form $form)
+    {
+        if ($form->get('campaignchain_hook_campaignchain_due')->has('execution_choice') && $form->get('campaignchain_hook_campaignchain_due')->get('execution_choice')->getData() == 'now') {
+            $this->job->execute($operation->getId());
+            $content = $this->contentService->getSlideshowByOperation($operation);
+            $this->session->getFlashBag()->add(
+                'success',
+                'The slide show was published. <a href="'.$content->getUrl().'">View it on SlideShare.net</a>.'
+            );
+
+            return true;
+        }
+
+        return false;
     }
 }

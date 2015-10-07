@@ -13,8 +13,7 @@ parameters:
         equals_operation: true
         operations:
             - %campaignchain.operation.slideshare.schedule%
-        controller_handler: "campaignchain.activity.controller.handler.slideshare.schedule"
-        operation_job: "campaignchain.job.operation.slideshare.publish_slideshow"
+        handler: "campaignchain.activity.controller.handler.slideshare.schedule"
 
 services:
     campaignchain.activity.controller.slideshare.schedule:
@@ -29,6 +28,7 @@ services:
             - "@campaignchain.operation.slideshare.slideshow"
             - "@campaignchain.core.location"
             - "@campaignchain.channel.slideshare.rest.client"
+            - "@campaignchain.job.operation.slideshare.publish_slideshow"
             - "@session"
             - "@templating"
             - "@router"
