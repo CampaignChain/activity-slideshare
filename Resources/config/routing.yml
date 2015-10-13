@@ -7,24 +7,24 @@
 
 campaignchain_activity_slideshare_new:
     pattern: /activity/slideshare/new
-    defaults: { _controller: CampaignChainActivitySlideShareBundle:SlideShare:new }
+    defaults: { _controller: campaignchain.activity.controller.slideshare.schedule:newAction }
 
 campaignchain_activity_slideshare_edit:
     pattern: /activity/slideshare/{id}/edit
-    defaults: { _controller: CampaignChainActivitySlideShareBundle:SlideShare:edit }
+    defaults: { _controller: campaignchain.activity.controller.slideshare.schedule:editAction }
 
 campaignchain_activity_slideshare_edit_modal:
     pattern: /modal/activity/slideshare/{id}/edit
-    defaults: { _controller: CampaignChainActivitySlideShareBundle:SlideShare:editModal }
+    defaults: { _controller: campaignchain.activity.controller.slideshare.schedule:editModalAction }
 
 campaignchain_activity_slideshare_edit_api:
     pattern: /api/private/activity/slideshare/byactivity/{id}/edit
-    defaults: { _controller: CampaignChainActivitySlideShareBundle:SlideShare:editApi }
+    defaults: { _controller: campaignchain.activity.controller.slideshare.schedule:editApiAction }
     options:
         expose: true
 
 campaignchain_activity_slideshare_read:
     pattern: /activity/slideshare/{id}
-    defaults: { _controller: CampaignChainActivitySlideShareBundle:SlideShare:read }
+    defaults: { _controller: campaignchain.activity.controller.slideshare.schedule:readAction }
     
 

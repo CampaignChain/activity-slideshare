@@ -5,7 +5,30 @@
 # For the full copyright and license information, please view the LICENSE
 # file that was distributed with this source code.
 
+parameters:
+    campaignchain.activity.slideshare.schedule:
+        bundle_name: "campaignchain/activity-slideshare"
+        module_identifier: "campaignchain-slideshare"
+        location: %campaignchain.location.slideshare.user%
+        equals_operation: true
+        operations:
+            - %campaignchain.operation.slideshare.schedule%
+        handler: "campaignchain.activity.controller.handler.slideshare.schedule"
+
 services:
-#    campaign_chain_activity_slide_share.example:
-#        class: CampaignChain\Activity\SlideShareBundle\Example
-#        arguments: [@service_id, "plain_value", %parameter%]
+    campaignchain.activity.controller.slideshare.schedule:
+        class: CampaignChain\CoreBundle\Controller\Module\ActivityModuleController
+        calls:
+            - [setContainer, ["@service_container"]]
+            - [setParameters, ["%campaignchain.activity.slideshare.schedule%"]]
+    campaignchain.activity.controller.handler.slideshare.schedule:
+        class: CampaignChain\Activity\SlideShareBundle\Controller\SlideShareHandler
+        arguments:
+            - "@doctrine.orm.entity_manager"
+            - "@campaignchain.operation.slideshare.slideshow"
+            - "@campaignchain.core.location"
+            - "@campaignchain.channel.slideshare.rest.client"
+            - "@campaignchain.job.operation.slideshare.publish_slideshow"
+            - "@session"
+            - "@templating"
+            - "@router"
