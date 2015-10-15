@@ -22,6 +22,7 @@ use Symfony\Component\HttpFoundation\Session\Session;
 use CampaignChain\CoreBundle\Entity\Operation;
 use CampaignChain\CoreBundle\Entity\Activity;
 use CampaignChain\CoreBundle\Entity\Location;
+use CampaignChain\CoreBundle\Entity\Campaign;
 use CampaignChain\Operation\SlideShareBundle\Entity\Slideshow;
 use CampaignChain\Operation\SlideShareBundle\EntityService\Slideshow as SlideshowService;
 
@@ -63,7 +64,7 @@ class SlideShareHandler extends AbstractActivityHandler
         $this->router           = $router;
     }
 
-    public function createContent(Location $location)
+    public function createContent(Location $location, Campaign $campaign)
     {
         // Retrieve slide decks from slideshare.net via REST API.
         $connection = $this->getRestApiConnectionByLocation($location);
@@ -144,8 +145,6 @@ class SlideShareHandler extends AbstractActivityHandler
 
         $connection = $this->restClient->connectByActivity($operation->getActivity());
         $xml = $connection->getSlideshowById($slideshow->getIdentifier());
-
-        print_r($xml);
 
         return $this->templating->renderResponse(
             'CampaignChainOperationSlideShareBundle::read.html.twig',
