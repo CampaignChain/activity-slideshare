@@ -64,7 +64,7 @@ class SlideShareHandler extends AbstractActivityHandler
         $this->router           = $router;
     }
 
-    public function createContent(Location $location, Campaign $campaign)
+    public function createContent(Location $location = null, Campaign $campaign = null)
     {
         // Retrieve slide decks from slideshare.net via REST API.
         $connection = $this->getRestApiConnectionByLocation($location);
