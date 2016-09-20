@@ -11,8 +11,6 @@ modules:
             edit_modal: campaignchain_activity_slideshare_edit_modal
             edit_api: campaignchain_activity_slideshare_edit_api
             read: campaignchain_activity_slideshare_read
-        services:
-            handler: campaignchain.activity.controller.handler.slideshare.schedule
         hooks:
             default:
                 campaignchain-due: true
