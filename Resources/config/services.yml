@@ -31,7 +31,7 @@ services:
     campaignchain.activity.controller.handler.slideshare.schedule:
         class: CampaignChain\Activity\SlideShareBundle\Controller\SlideShareHandler
         arguments:
-            - "@doctrine.orm.entity_manager"
+            - "@doctrine"
             - "@campaignchain.operation.slideshare.slideshow"
             - "@campaignchain.core.location"
             - "@campaignchain.channel.slideshare.rest.client"

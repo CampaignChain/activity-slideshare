@@ -21,7 +21,7 @@ use CampaignChain\Channel\SlideShareBundle\REST\SlideShareClient;
 use CampaignChain\CoreBundle\Controller\Module\AbstractActivityHandler;
 use CampaignChain\CoreBundle\EntityService\LocationService;
 use CampaignChain\Operation\SlideShareBundle\Job\PublishSlideshow;
-use Doctrine\ORM\EntityManager;
+use Doctrine\Common\Persistence\ManagerRegistry;
 use Symfony\Bundle\FrameworkBundle\Routing\Router;
 use Symfony\Bundle\TwigBundle\TwigEngine;
 use Symfony\Component\Form\Form;
@@ -51,7 +51,7 @@ class SlideShareHandler extends AbstractActivityHandler
     private     $restApiConnection;
 
     public function __construct(
-        EntityManager $em,
+        ManagerRegistry $managerRegistry,
         SlideshowService $contentService,
         LocationService $locationService,
         SlideShareClient $restClient,
@@ -61,7 +61,7 @@ class SlideShareHandler extends AbstractActivityHandler
         Router $router
     )
     {
-        $this->em = $em;
+        $this->em = $managerRegistry->getManager();
         $this->contentService   = $contentService;
         $this->locationService  = $locationService;
         $this->restClient       = $restClient;
