@@ -39,3 +39,4 @@ services:
             - "@session"
             - "@templating"
             - "@router"
+            - "@campaignchain.core.util.scheduler"

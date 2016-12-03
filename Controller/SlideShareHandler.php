@@ -32,6 +32,7 @@ use CampaignChain\CoreBundle\Entity\Location;
 use CampaignChain\CoreBundle\Entity\Campaign;
 use CampaignChain\Operation\SlideShareBundle\Entity\Slideshow;
 use CampaignChain\Operation\SlideShareBundle\EntityService\Slideshow as SlideshowService;
+use CampaignChain\CoreBundle\Util\SchedulerUtil;
 
 class SlideShareHandler extends AbstractActivityHandler
 {
@@ -49,6 +50,8 @@ class SlideShareHandler extends AbstractActivityHandler
     protected $availableSlideshows;
     private     $remoteSlideshow;
     private     $restApiConnection;
+    /** @var SchedulerUtil */
+    protected $schedulerUtil;
 
     public function __construct(
         ManagerRegistry $managerRegistry,
@@ -58,7 +61,8 @@ class SlideShareHandler extends AbstractActivityHandler
         PublishSlideshow $job,
         $session,
         TwigEngine $templating,
-        Router $router
+        Router $router,
+        SchedulerUtil $schedulerUtil
     )
     {
         $this->em = $managerRegistry->getManager();
@@ -69,6 +73,7 @@ class SlideShareHandler extends AbstractActivityHandler
         $this->session          = $session;
         $this->templating       = $templating;
         $this->router           = $router;
+        $this->schedulerUtil    = $schedulerUtil;
     }
 
     public function createContent(Location $location = null, Campaign $campaign = null)
@@ -184,18 +189,18 @@ class SlideShareHandler extends AbstractActivityHandler
         return $location;
     }
 
-    public function postPersistNewEvent(Operation $operation, Form $form, $content = null)
+    public function postPersistNewEvent(Operation $operation, $content = null)
     {
         // Content to be published immediately?
-        if (!$this->publishNow($operation, $form)){
+        if (!$this->publishNow($operation)){
             $this->makeRemoteSlideshowEmbeddable($operation);
         }
     }
 
-    public function postPersistEditEvent(Operation $operation, Form $form, $content = null)
+    public function postPersistEditEvent(Operation $operation, $content = null)
     {
         // Content to be published immediately?
-        $this->publishNow($operation, $form);
+        $this->publishNow($operation);
     }
 
     public function preFormSubmitEditEvent(Operation $operation)
@@ -300,9 +305,9 @@ class SlideShareHandler extends AbstractActivityHandler
         return true;
     }
 
-    private function publishNow(Operation $operation, Form $form)
+    private function publishNow(Operation $operation)
     {
-        if ($form->get('campaignchain_hook_campaignchain_due')->has('execution_choice') && $form->get('campaignchain_hook_campaignchain_due')->get('execution_choice')->getData() == 'now') {
+        if ($this->schedulerUtil->isDueNow($operation->getStartDate())) {
             $this->job->execute($operation->getId());
             $content = $this->contentService->getSlideshowByOperation($operation);
             $this->session->getFlashBag()->add(
