@@ -34,4 +34,8 @@ campaignchain_activity_slideshare_read:
     pattern: /activity/slideshare/{id}
     defaults: { _controller: campaignchain.activity.controller.slideshare.schedule:readAction }
     
-
+campaignchain_activity_slideshare_read_modal:
+    pattern: /modal/activity/slideshare/{id}
+    defaults: { _controller: campaignchain.activity.controller.slideshare.schedule:readModalAction }
+    options:
+        expose: true

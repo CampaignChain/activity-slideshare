@@ -150,7 +150,13 @@ class SlideShareHandler extends AbstractActivityHandler
         }
     }
 
-    public function readAction(Operation $operation)
+    /**
+     * @param Operation $operation
+     * @param bool $isModal Modal view yes or no?
+     * @return \Symfony\Component\HttpFoundation\Response
+     * @throws \Exception
+     */
+    public function readAction(Operation $operation, $isModal = false)
     {
         // Get the slideshow details
         $slideshow = $this->contentService->getSlideshowByOperation($operation);
@@ -158,8 +164,14 @@ class SlideShareHandler extends AbstractActivityHandler
         $connection = $this->restClient->connectByActivity($operation->getActivity());
         $xml = $connection->getSlideshowById($slideshow->getIdentifier());
 
+        if(!$isModal){
+            $twigTpl = 'CampaignChainOperationSlideShareBundle::read.html.twig';
+        } else {
+            $twigTpl = 'CampaignChainOperationSlideShareBundle::read_modal.html.twig';
+        }
+
         return $this->templating->renderResponse(
-            'CampaignChainOperationSlideShareBundle::read.html.twig',
+            $twigTpl,
             array(
                 'page_title' => $operation->getActivity()->getName(),
                 'operation' => $operation,

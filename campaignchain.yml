@@ -11,6 +11,7 @@ modules:
             edit_modal: campaignchain_activity_slideshare_edit_modal
             edit_api: campaignchain_activity_slideshare_edit_api
             read: campaignchain_activity_slideshare_read
+            read_modal: campaignchain_activity_slideshare_read_modal
         hooks:
             default:
                 campaignchain-due: true
