@@ -13,29 +13,29 @@
 # limitations under the License.
 
 campaignchain_activity_slideshare_new:
-    pattern: /activity/slideshare/new
+    path: /activity/slideshare/new
     defaults: { _controller: campaignchain.activity.controller.slideshare.schedule:newAction }
 
 campaignchain_activity_slideshare_edit:
-    pattern: /activity/slideshare/{id}/edit
+    path: /activity/slideshare/{id}/edit
     defaults: { _controller: campaignchain.activity.controller.slideshare.schedule:editAction }
 
 campaignchain_activity_slideshare_edit_modal:
-    pattern: /modal/activity/slideshare/{id}/edit
+    path: /modal/activity/slideshare/{id}/edit
     defaults: { _controller: campaignchain.activity.controller.slideshare.schedule:editModalAction }
 
 campaignchain_activity_slideshare_edit_api:
-    pattern: /api/private/activity/slideshare/byactivity/{id}/edit
+    path: /api/private/activity/slideshare/byactivity/{id}/edit
     defaults: { _controller: campaignchain.activity.controller.slideshare.schedule:editApiAction }
     options:
         expose: true
 
 campaignchain_activity_slideshare_read:
-    pattern: /activity/slideshare/{id}
+    path: /activity/slideshare/{id}
     defaults: { _controller: campaignchain.activity.controller.slideshare.schedule:readAction }
     
 campaignchain_activity_slideshare_read_modal:
-    pattern: /modal/activity/slideshare/{id}
+    path: /modal/activity/slideshare/{id}
     defaults: { _controller: campaignchain.activity.controller.slideshare.schedule:readModalAction }
     options:
         expose: true
